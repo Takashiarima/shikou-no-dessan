@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: shikou-no-dessan
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SERVE_STATIC
+        value: "1"
+      - key: NODE_ENV
+        value: production

@@ -1,0 +1,40 @@
+:root {
+  --bg: #f7f4ef;
+  --bg-panel: #ffffff;
+  --text: #1a1a1a;
+  --text-muted: #5c5c5c;
+  --border: #e8e2d8;
+  --accent: #c45d3a;
+  --accent-soft: #f3e8e0;
+  --accent-hover: #a84d30;
+  --user-bubble: #2d4a3e;
+  --assistant-bubble: #ffffff;
+  --radius: 12px;
+  --radius-lg: 20px;
+  --shadow: 0 2px 12px rgba(26, 26, 26, 0.06);
+  --font: 'Noto Sans JP', system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
