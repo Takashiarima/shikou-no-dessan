@@ -1,4 +1,4 @@
-import { generateCardMarkdown } from '../lib/anthropic.mjs';
+import { generateCardMarkdown } from '../lib/llm.mjs';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

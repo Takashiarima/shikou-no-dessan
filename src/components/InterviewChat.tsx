@@ -100,8 +100,8 @@ export function InterviewChat({ onCardGenerated, onGeneratingChange }: Interview
     ? healthErr.slice(0, 80)
     : !health
       ? '接続確認中…'
-      : health.hasAnthropicKey
-        ? `API接続OK · ${health.model}`
+      : health.hasApiKey
+        ? `API接続OK · ${health.provider ?? 'ai'} · ${health.model}`
         : 'APIキー未設定（カード生成不可）';
 
   return (
@@ -111,7 +111,7 @@ export function InterviewChat({ onCardGenerated, onGeneratingChange }: Interview
           <h2>インタビュー</h2>
           <p className="chat-sub">全6問 · 5〜7分</p>
         </div>
-        <span className={`status-pill ${health?.hasAnthropicKey ? 'ok' : 'warn'}`}>{statusText}</span>
+        <span className={`status-pill ${health?.hasApiKey ? 'ok' : 'warn'}`}>{statusText}</span>
       </div>
 
       <div className="chat-scroll" ref={scrollRef} role="log" aria-live="polite">

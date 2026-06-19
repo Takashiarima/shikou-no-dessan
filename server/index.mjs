@@ -9,7 +9,7 @@ import express from 'express';
 import { accessSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { generateCardMarkdown, getHealthPayload } from '../lib/anthropic.mjs';
+import { generateCardMarkdown, getHealthPayload } from '../lib/llm.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 8787);

@@ -1,4 +1,4 @@
-import { getHealthPayload } from '../lib/anthropic.mjs';
+import { getHealthPayload } from '../lib/llm.mjs';
 
 export default function handler(req, res) {
   if (req.method === 'OPTIONS') {
