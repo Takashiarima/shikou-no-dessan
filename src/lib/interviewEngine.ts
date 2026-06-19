@@ -274,15 +274,242 @@ function optionReplies(options: ReadonlyArray<{ id: string; label: string }>): Q
   return options.map((o) => ({ id: o.id, label: o.label }));
 }
 
+export type QuickReplyChoice = { id: string; label: string };
+
+/** クイックリプライの最大選択数（OKで一括送信） */
+export function getQuickReplyMaxSelections(phase: InterviewPhase): number {
+  if (phase === 'q5' || phase === 'q5_pick_more' || phase === 'q6' || phase === 'q6_pick_more') {
+    return 2;
+  }
+  return 1;
+}
+
+function choicesUserText(choices: QuickReplyChoice[]): string {
+  return choices.map((c) => c.label).join('、');
+}
+
+function handleConfirmQuickReplies(
+  state: InterviewState,
+  choices: QuickReplyChoice[],
+): InterviewState {
+  if (choices.length === 0) return state;
+
+  const max = getQuickReplyMaxSelections(state.phase);
+  if (choices.length > max) return state;
+
+  const userText = choicesUserText(choices);
+  const newMessages = [...state.messages, user(userText)];
+  const base = { ...state, messages: newMessages };
+
+  switch (state.phase) {
+    case 'welcome':
+      if (choices[0].id === 'demo') {
+        return {
+          ...base,
+          phase: 'demo_intro',
+          isDemoMode: true,
+          messages: [...newMessages, assistant(DEMO_INTRO_MESSAGE)],
+          quickReplies: DEMO_SCENES.map((s) => ({ id: s.id, label: s.label })),
+          awaitingTextInput: false,
+          showNameInput: false,
+        };
+      }
+      if (choices[0].id === 'start') {
+        return {
+          ...base,
+          phase: 'q1_name',
+          messages: [
+            ...newMessages,
+            assistant('ありがとうございます！では早速はじめましょう 😊'),
+            assistant(q1Message()),
+          ],
+          quickReplies: moodReplies(),
+          awaitingTextInput: false,
+          showNameInput: true,
+          textInputPlaceholder: '呼ばれたい名前を入力…',
+        };
+      }
+      return state;
+
+    case 'demo_intro':
+      return {
+        ...base,
+        phase: 'q1_name',
+        isDemoMode: true,
+        answers: { ...base.answers, demoScene: choices[0].label },
+        messages: [
+          ...newMessages,
+          assistant('ありがとうございます！では体験を始めましょう 😊'),
+          assistant(q1Message()),
+        ],
+        quickReplies: moodReplies(),
+        awaitingTextInput: false,
+        showNameInput: true,
+        textInputPlaceholder: '呼ばれたい名前を入力…',
+      };
+
+    case 'q1_mood': {
+      const q1 = base.answers.q1 ?? { name: '', mood: '', moodLabel: '' };
+      const { id: moodId, label: moodLabel } = choices[0];
+      const q1Complete = { ...q1, mood: moodId, moodLabel };
+
+      if (moodId === '6') {
+        return {
+          ...base,
+          phase: 'q1_mood',
+          answers: { ...base.answers, q1: { ...q1Complete, moodLabel: 'その他' } },
+          quickReplies: [],
+          awaitingTextInput: true,
+          showNameInput: false,
+          textInputPlaceholder: '今の気分を自分の言葉で…',
+        };
+      }
+
+      if (needsDeepDive(moodLabel)) {
+        return {
+          ...base,
+          phase: 'q1_deepdive',
+          answers: { ...base.answers, q1: q1Complete },
+          quickReplies: [],
+          awaitingTextInput: true,
+          showNameInput: false,
+          textInputPlaceholder: 'ひとことで大丈夫ですよ…',
+          messages: [
+            ...newMessages,
+            assistant(
+              `${q1Complete.name}さん、ありがとうございます！\n\nその気分は、今日のどんなところから来ていますか？ 思いつくことがあれば、ひとことで大丈夫ですよ。`,
+            ),
+          ],
+        };
+      }
+
+      return advanceToQ2(base, q1Complete, 1);
+    }
+
+    case 'q2': {
+      const choice = choices[0];
+      if (choice.id === '9' || choice.label.includes('その他')) {
+        return {
+          ...base,
+          phase: 'q2',
+          answers: {
+            ...base.answers,
+            q2: { choice: choice.id, choiceLabel: choice.label },
+          },
+          quickReplies: [],
+          awaitingTextInput: true,
+          textInputPlaceholder: '自分の言葉で教えてください…',
+        };
+      }
+      const q2Data = { choice: choice.id, choiceLabel: choice.label };
+      if (needsDeepDive(choice.label)) {
+        return {
+          ...base,
+          phase: 'q2_deepdive',
+          answers: { ...base.answers, q2: q2Data },
+          quickReplies: [],
+          awaitingTextInput: true,
+          textInputPlaceholder: 'ひとことで大丈夫ですよ…',
+          messages: [
+            ...newMessages,
+            assistant('それは、どんな気分のときに触れることが多いですか？ ひとことで大丈夫ですよ。'),
+          ],
+        };
+      }
+      return advanceToQ3(base, q2Data, 2);
+    }
+
+    case 'q5':
+    case 'q5_pick_more': {
+      const soleOther = choices.length === 1 && choices[0].id === '9';
+      if (soleOther) {
+        return {
+          ...base,
+          phase: 'q5',
+          answers: {
+            ...base.answers,
+            q5: { choices: [{ id: '9', label: choices[0].label }] },
+          },
+          quickReplies: [],
+          awaitingTextInput: true,
+          textInputPlaceholder: '自分の言葉で教えてください…',
+        };
+      }
+
+      const q5Result = { choices: [...choices] };
+      const q5Labels = q5Result.choices.map((c) => c.label).join('、');
+      if (needsDeepDive(q5Labels)) {
+        return {
+          ...base,
+          phase: 'q5_deepdive',
+          answers: { ...base.answers, q5: q5Result },
+          quickReplies: [],
+          awaitingTextInput: true,
+          textInputPlaceholder: 'ひとことで大丈夫ですよ…',
+          messages: [
+            ...newMessages,
+            assistant('それを気にするのは、どんな場面で出やすいですか？ ひとことで大丈夫ですよ。'),
+          ],
+        };
+      }
+      return advanceToQ6(base, q5Result, 5);
+    }
+
+    case 'q6':
+    case 'q6_pick_more': {
+      const soleOther = choices.length === 1 && choices[0].id === '9';
+      if (soleOther) {
+        return {
+          ...base,
+          phase: 'q6',
+          answers: {
+            ...base.answers,
+            q6: { choices: [{ id: '9', label: choices[0].label }], topic: '' },
+          },
+          quickReplies: [],
+          awaitingTextInput: true,
+          textInputPlaceholder: '自分の言葉で教えてください…',
+        };
+      }
+
+      const q6Partial = { choices: [...choices], topic: '' };
+      return {
+        ...base,
+        phase: 'q6_topic',
+        answers: { ...base.answers, q6: q6Partial },
+        quickReplies: [],
+        awaitingTextInput: true,
+        showNameInput: false,
+        textInputPlaceholder: '今日話してみたいテーマ…',
+        messages: [...newMessages, assistant(Q6_TOPIC_PROMPT)],
+      };
+    }
+
+    case 'demo_complete':
+      if (choices[0].id === 'start') {
+        return createInitialState();
+      }
+      return state;
+
+    default:
+      return state;
+  }
+}
+
 export function reduceInterview(
   state: InterviewState,
   action:
     | { type: 'quick_reply'; replyId: string; label: string }
+    | { type: 'confirm_quick_replies'; choices: QuickReplyChoice[] }
     | { type: 'text'; text: string }
     | { type: 'reset' },
 ): InterviewState {
   if (action.type === 'reset') {
     return createInitialState();
+  }
+
+  if (action.type === 'confirm_quick_replies') {
+    return handleConfirmQuickReplies(state, action.choices);
   }
 
   const text = action.type === 'text' ? action.text.trim() : '';
