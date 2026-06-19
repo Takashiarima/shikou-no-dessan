@@ -1,0 +1,17 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "functions": {
+    "api/generate.mjs": {
+      "maxDuration": 60,
+      "includeFiles": "agent/**"
+    },
+    "api/health.mjs": {
+      "includeFiles": "agent/**"
+    }
+  },
+  "rewrites": [
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}

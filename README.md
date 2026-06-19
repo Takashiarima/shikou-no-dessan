@@ -47,6 +47,26 @@ npm start
 
 http://localhost:8787 でフロント＋APIが同一ポートで動作します。
 
+## Vercel へのデプロイ（推奨）
+
+### ダッシュボードから（初回）
+
+1. [Vercel で新規プロジェクト](https://vercel.com/new) を開く
+2. GitHub の `Takashiarima/shikou-no-dessan` を Import
+3. 環境変数に `ANTHROPIC_API_KEY` を追加
+4. Deploy
+
+ビルド設定は `vercel.json` で自動適用されます（Vite + `/api` サーバーレス関数）。
+
+### CLI から
+
+```bash
+npx vercel login
+npx vercel --prod
+# 環境変数はダッシュボードまたは:
+npx vercel env add ANTHROPIC_API_KEY production
+```
+
 ## Docker
 
 ```bash
